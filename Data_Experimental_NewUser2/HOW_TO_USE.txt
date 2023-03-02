@@ -1,0 +1,81 @@
+How to use ExperimentalConditions
+
+ExperimentalConditions_## (## is the user's initials) is a .csv file.
+It has two goals:
+1) Keep a trace of all of the relevant conditions that characterize your experiments.
+2) Be read by the python code that will use the data here to perform the analysis.
+
+Here is a description column by column.
+NB: Incorrectly filling a column used by the analysis will leads to analysis error. The other columns can be useful for subsequent data wrangling.
+
+> tags - text - not used by the analysis
+Just a list of tags for you to qualify the experiment.
+
+> date - text - not used by the analysis
+Identify the date of your experiment.
+
+> manip - text - not used by the analysis
+Identify the manipId of your experiment. Each distinct set of conditions on a given day must have a distinct manipId. Example: for date 23-02-28 you have one pop of cells with no drug and one pop of cells treated with Y27. You will put 2 lines in the table, manip = 'M1' with drug = 'none' and manip = 'M2' with drug = 'Y27'.
+
+> experimentType - text - used by the analysis
+Identify the type of experiment you performed. Default is 'constant field'. If you develop a new experimental protocol requiring a different kind of tracking and analysis, please contact me.
+
+> drug - text - not used by the analysis
+Identify the drug treatment. Default is 'none'.
+
+> concentration - float - not used by the analysis
+Identify the drug concentration, in µM. Default is '0.0'.
+
+> substrate - text - not used by the analysis
+Identify the substrate state.
+
+> cell type - text - not used by the analysis
+Identify the cell type.
+
+> cell subtype - text - not used by the analysis
+Identify the cell subtype.
+
+> bead type - text - used by the analysis
+Identify the bead type. Default is M450.
+
+> bead diameter - integer - used by the analysis
+Identify the bead diameter in nm. Need to be determined from a calibration for each batch of beads ordered.
+
+> normal field - float - used by the analysis
+Uniform magnetic field applied to the chamber during the experiment, in mT. It is the target field. The real one can differ.
+
+> magnetic field correction - float - used by the analysis
+Corrective multiplicative coefficient to 'normal field' to take into account the actual magnetic field of the experiment. Example: one does an experiment with a constant field at 5mT. At the end of the experiment, one measures with a gaussmeter than the field was actually 5.1 mT. The 'magnetic field correction' will be 5.1 / 5 = 1.02.
+
+> multi images - integer - used by the analysis
+Number of Z-planes acquired per timepoint. Acquiring several Z-planes per timepoint increase the precision of Z-detection.
+
+> multi image Z step - integer - used by the analysis
+Step in Z between each Z-planes if multi-image > 1, in nm.
+
+> multi image Z direction - text - used by the analysis
+Direction of the scan when acquiring several Z-planes per timepoint. Needs to be 'upward' or 'downward'.
+
+> objective magnification - text - not used by the analysis
+Identify the objective. 100X or 63X are strongly recommended.
+
+> scale pixel per um - float - used by the analysis
+Scale of the objective in pixel per micron. Proceeding to a manual calibration when using a new microscope is very strongly recommended.
+
+> objective immersion - text - not used by the analysis
+Identify the immersion liquid. 'oil', 'air' or 'water'.
+
+> optical index correction - float - used by the analysis
+Ratio of the optical index of the cell medium over the index of the immersion liquid. Crucial for Z-distances computation. When using an oil-objective and typical DMEM, optical index correction = 1.33/1.52 = 0.875. When using an air-objective and typical DMEM, optical index correction = 1.33/1.00 = 1.33. 
+
+> microscope software - text - used by the analysis
+Identify the software used for the image acquisition. Can be useful in the analysis if the data acquired from this software need a specific pre-processing.
+
+> loop structure - text - used by the analysis
+Identify a periodicity of events during the image acquisition. Example: acquire 1 image in epifluorescence every 300 images. Example 2: acquire a specific Z-plane once every 30 images. Currently not active in the simplified code, please contact me if it becomes useful.
+
+> comments - text - not used by the analysis
+Write notes for yourself.
+
+Created on Thu Mar 2 2023
+@authors: Joseph Vermeil
