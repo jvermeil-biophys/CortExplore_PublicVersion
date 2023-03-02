@@ -11,8 +11,8 @@ C:/
 │  │  │  │  │  ├─ The VERY IMPORTANT experimental data table (.csv).
 │  │  │  │  │ 
 │  │  │  │  ├─ Code_Python/
-│  │  │  │  │  ├─ Scripts_##/ 		 -> TO CREATE AT THE BEGINNING FROM "Scripts_NewUser". Personnal code! Code to analyse, or to plot the data. Mainly scripts.
-│  │  │  │  │  ├─ Scripts_NewUser/	 -> Similar to Scripts_## but contains ~empty scripts, ready to be copied and used in case there is a new user for this code.
+│  │  │  │  │  ├─ Code_##/ 		 -> TO CREATE AT THE BEGINNING FROM "Code_NewUser". Personnal code! Code to analyse, or to plot the data. Mainly scripts.
+│  │  │  │  │  ├─ Code_NewUser/	 -> Similar to Code_## but contains ~empty scripts, ready to be copied and used in case there is a new user for this code.
 │  │  │  │  │  ├─ ImagesPreprocessing.py -> Raw images on external drives TO croped images on local drive.
 │  │  │  │  │  ├─ BeadTracker.py	 -> Croped images on local drive TO timeseries (.csv) files (see below).
 │  │  │  │  │  ├─ TrackAnalyser.py	 -> Timeseries (.csv) files TO complex mechanical analysis, results saved in large tables (.csv).
