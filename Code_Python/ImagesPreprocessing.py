@@ -30,7 +30,6 @@ import shutil
 import traceback
 
 import numpy as np
-import pyjokes as pj
 
 from skimage import io
 
@@ -44,19 +43,12 @@ import GraphicStyles as gs
 import GlobalConstants as gc
 import UtilityFunctions as ufun
 
-#%% Define parameters # Numi
 
-# date = '22.08.26'
-# DirSave = os.path.join(cp.DirDataRaw, date)
-# DirExt = 'G:/20220826_100xoil_3t3optorhoa_4.5beadsStrept_Mechanics/22.08.26'
-# # prefix = 'cell'
-# # channel = 'w1TIRF DIC'
-# microscope = 'labview'
 
-#%% Define parameters # Jojo
+#%% Define parameters
 
 date = '22.03.28'
-DirExt = 'E:/22.03.28_Patterns3T3_drugs' #'/M4_patterns_ctrl'
+DirExt = 'E:/22.03.28_Patterns3T3_drugs' 
 DirSave = os.path.join(cp.DirDataRaw, date)
 
 prefix = ''
@@ -383,10 +375,6 @@ def cropAndCopy(DirSrc, DirDst, allRefPoints, allCellPaths, microscope, channel 
             print(gs.RED + DirDst + '/' + cellName + '.tif' + '\nError when saving' + gs.NORMAL)
             continue
         
-        if count%5 == 0:
-            joke = pj.get_joke(language='en', category= 'all')
-            print(joke)
-            count = count + 1
 
 
 
@@ -524,13 +512,4 @@ print(gs.BLUE + 'Saving all tiff stacks...' + gs.NORMAL)
 cropAndCopy(DirExt, DirSave, allRefPoints, allCellsToCrop, microscope)
 
 
-#%% Creating .tif stacks of 561n recruitment images
-
-# DirSave = 'D:/Anumita/MagneticPincherData/Raw/'
-# DirExt = 'F:/Cortex Experiments/OptoPincher Experiments/20220322_100xoil_3t3optorhoa_4.5beads_15mT/22.03.22'
-# prefix = 'cell'
-# channel = 'w3TIRF 561'
-
-
-# AllMMTriplets2Stack(DirExt, DirSave, prefix, channel)
 

@@ -29,7 +29,6 @@ import ctypes
 from datetime import date
 
 COMPUTERNAME = os.environ['COMPUTERNAME']
-print(COMPUTERNAME)
 
 # %% 1. Paths
 
@@ -70,7 +69,6 @@ DirDataAnalysisUMS = os.path.join(DirDataAnalysis, "UserManualSelection")
 DirDataTimeseries = os.path.join(DirData, "Data_Timeseries")
 DirDataTimeseriesRawtraj = os.path.join(DirDataTimeseries, "Trajectories_raw")
 DirDataTimeseriesTraj = os.path.join(DirDataTimeseries, "Trajectories")
-DirDataTimeseriesStressStrain = os.path.join(DirDataTimeseries, "Timeseries_stress-strain")
 
 DirDataFig = os.path.join(DirData, "Figures")
 DirDataFigToday = os.path.join(DirDataFig, "Historique", str(date.today()))
@@ -80,7 +78,6 @@ if not CloudSaving == '':
     DirCloudAnalysis = os.path.join(DirCloud, "Data_Analysis")
     DirCloudAnalysisUMS = os.path.join(DirCloudAnalysis, "UserManualSelection")
     DirCloudTimeseries = os.path.join(DirCloud, "Data_Timeseries")
-    DirCloudTimeseriesStressStrain = os.path.join(DirCloudTimeseries, "Timeseries_stress-strain")
     DirCloudFig = os.path.join(DirCloud, "Figures")
     DirCloudFigToday = os.path.join(DirCloudFig, "Historique", str(date.today()))
 else:
@@ -99,7 +96,7 @@ sys.path.append(DirRepoPython)
 MainDirs = [DirRepo, DirData, DirTempPlots]
 RepoSubdirs = [DirRepoPython, DirRepoPythonUser, DirRepoExp]
 DataSubdirs = [DirDataRaw, DirDataAnalysis, DirDataFig,
-               DirDataTimeseries, DirDataTimeseriesTraj, DirDataTimeseriesRawtraj, DirDataTimeseriesStressStrain]
+               DirDataTimeseries, DirDataTimeseriesTraj, DirDataTimeseriesRawtraj]
 
 if not CloudSaving == '':
     CloudDirs = [DirCloud, DirCloudExp, DirCloudFig, DirCloudAnalysis, DirCloudTimeseries, DirCloudTimeseriesStressStrain]
@@ -200,8 +197,8 @@ def makeDirArchi():
 # │  │  │  │  │  ├─ Any matlab coded program. For now mainly the Photomask drawing.
 # │  │  │  │  │ 
 # │  │  │  │  ├─ Code_Python/
-# │  │  │  │  │  ├─ Scripts_##/ 		 -> TO CREATE AT THE BEGINNING FROM "Scripts_NewUser". Personnal code! Code to analyse, or to plot the data. Mainly scripts.
-# │  │  │  │  │  ├─ Scripts_NewUser/	 -> Similar to Scripts_## but contains ~empty scripts, ready to be copied and used in case there is a new user for this code.
+# │  │  │  │  │  ├─ Code_##/ 		 -> TO CREATE AT THE BEGINNING FROM "Code_NewUser". Personnal code! Code to analyse, or to plot the data. Mainly scripts.
+# │  │  │  │  │  ├─ Code_NewUser/	 -> Similar to Code_## but contains ~empty scripts, ready to be copied and used in case there is a new user for this code.
 # │  │  │  │  │  ├─ ImagesPreprocessing.py -> Raw images on external drives TO croped images on local drive.
 # │  │  │  │  │  ├─ BeadTracker.py	 -> Croped images on local drive TO timeseries (.csv) files (see below).
 # │  │  │  │  │  ├─ TrackAnalyser.py	 -> Timeseries (.csv) files TO complex mechanical analysis, results saved in large tables (.csv).

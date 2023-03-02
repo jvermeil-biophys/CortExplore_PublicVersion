@@ -27,8 +27,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 import pandas as pd
 import scipy.ndimage as ndi
-import matplotlib.pyplot as plt
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 
 import os
 import re
@@ -38,18 +38,18 @@ import numbers
 import pyautogui
 import matplotlib
 import traceback
-# import cv2
 
-# import scipy
-from scipy import interpolate
-from scipy import signal
 
-# import skimage
+
 from skimage import io, filters, exposure, measure, transform, util, color
+from scipy import interpolate, signal
 from scipy.signal import find_peaks, savgol_filter
 from scipy.optimize import linear_sum_assignment
 from matplotlib.gridspec import GridSpec
 from datetime import date, datetime
+from PyQt5 import QtWidgets as Qtw
+from collections.abc import Collection
+from copy import deepcopy
 
 #### Local Imports
 
@@ -63,8 +63,6 @@ import GlobalConstants as gc
 # 2. Pandas settings
 pd.set_option('mode.chained_assignment', None)
 
-# 3. Plot settings
-gs.set_default_options_jv()
 
 # 4. Other settings
 # These regex are used to correct the stupid date conversions done by Excel
@@ -74,9 +72,91 @@ dateFormatExcel2 = re.compile(r'[1-2]\d-\d{2}-(?:19|20)\d{2}') # matches X#-##-Y
 dateFormatOk = re.compile(r'\d{2}-\d{2}-\d{2}') # Correct format yy-mm-dd we use
 
 
-
 # %% (1) Utility functions
 
+
+# %%% Image management - nomeclature and creating stacks
+
+def AllMMTriplets2Stack(DirExt, DirSave, prefix, channel):
+    """
+    Used for metamorph created files.
+    Metamoprh does not save images in stacks but individual triplets. These individual triplets take time
+    to open in FIJI.
+    This function takes images of a sepcific channel and creates .tif stacks from them.
+       
+    """
+    
+    allCells = os.listdir(DirExt)
+    excludedCells = []
+    for currentCell in allCells:
+        dirPath = os.path.join(DirExt, currentCell)
+        allFiles = os.listdir(dirPath)
+        date = findInfosInFileName(currentCell, 'date')
+        
+        # date = date.replace('-', '.')
+        filename = currentCell+'_'+channel
+
+        try:
+            os.mkdir(DirSave+'/'+currentCell)
+        except:
+            pass
+        
+        allFiles = [dirPath+'/'+string for string in allFiles if 'thumb' not in string and '.TIF' in string and channel in string]
+        #+4 at the end corrosponds to the '_t' part to sort the array well
+        limiter = len(dirPath)+len(prefix)+len(channel)+4
+        
+        try:
+            allFiles.sort(key=lambda x: int(x[limiter:-4]))
+        except:
+            print('Error in sorting files')
+        
+        try:
+            ic = io.ImageCollection(allFiles, conserve_memory = True)
+            stack = io.concatenate_images(ic)
+            io.imsave(DirSave+'/'+currentCell+'/'+filename+'.tif', stack)
+        except:
+            excludedCells.append(currentCell)
+            print(gs.ORANGE + "Unknown error in saving "+currentCell + gs.NORMAL)
+            
+    return excludedCells
+        
+
+def renamePrefix(DirExt, currentCell, newPrefix):
+    """
+    Used for metamorph created files.
+    Metamorph creates a new folder for each timelapse, within which all images contain a predefined 
+    'prefix' and 'channel' name which can differ between microscopes. Eg.: 'w1TIRF_DIC' or 'w2TIRF_561'
+    
+    If you forget to create a new folder for a new timelapse, Metamorph automatically changes the prefix
+    to distinguish between the old and new timelapse triplets. This can get annoying when it comes to processing 
+    many cells.
+    
+    This function allows you to rename the prefix of all individual triplets in a specific folder. 
+    
+    """
+    
+    path = os.path.join(DirExt, currentCell)
+    allImages = os.listdir(path)
+    for i in allImages:
+        if i.endswith('.TIF'):
+            split = i.split('_')
+            if split[0] != newPrefix:
+                split[0] = newPrefix
+                newName = '_'.join(split)
+                try:
+                    os.rename(os.path.join(path,i), os.path.join(path, newName))
+                except:
+                    print(currentCell)
+                    print(gs.ORANGE + "Error! There may be other files with the new prefix you can trying to incorporate" + gs.NORMAL)
+        
+        if i.endswith('.nd'):
+            newName = newPrefix+'.nd'
+            try:
+                os.rename(os.path.join(path,i), os.path.join(path, newName))
+            except:
+                print(currentCell)
+                print(gs.YELLOW + "Error! There may be other .nd files with the new prefix you can trying to incorporate" + gs.NORMAL)
+            
 # %%% Data management
 
 def getExperimentalConditions(DirExp = cp.DirRepoExp, save = False, suffix = cp.suffix):
@@ -90,6 +170,8 @@ def getExperimentalConditions(DirExp = cp.DirRepoExp, save = False, suffix = cp.
     NEW FEATURE: Thanks to "engine='python'" in pd.read_csv() the separator can now be detected automatically !
     """
     
+    top = time.time()
+    
     #### 0. Import the table
     if suffix == '':
         experimentalDataFile = 'ExperimentalConditions.csv'
@@ -100,6 +182,7 @@ def getExperimentalConditions(DirExp = cp.DirRepoExp, save = False, suffix = cp.
     expDf = pd.read_csv(experimentalDataFilePath, sep=None, header=0, engine='python')
     # print(gs.BLUE + 'Importing Experimental Conditions' + gs.NORMAL)
     print(gs.BLUE + 'Experimental Conditions Table has ' + str(expDf.shape[0]) + ' lines and ' + str(expDf.shape[1]) + ' columns' + gs.NORMAL)
+    
     #### 1. Clean the table
     
     #### 1.1 Remove useless columns
@@ -135,32 +218,16 @@ def getExperimentalConditions(DirExp = cp.DirRepoExp, save = False, suffix = cp.
     #### 1.5 Format 'magnetic field correction'
     expDf['magnetic field correction'] = expDf['magnetic field correction'].astype(float)
     
-    #### 1.6 Format 'with fluo images'
-    expDf['with fluo images'] = expDf['with fluo images'].astype(bool)
 
-    # #### 1.7 Format 'ramp field'
-    # try:
-    #     print(ORANGE + 'ramp field : converted to list successfully' + gs.NORMAL)
-    #     expDf['ramp field'] = \
-    #     expDf['ramp field'].apply(lambda x: [x.split(';')[0], x.split(';')[1]] if not pd.isnull(x) else [])
-    # except:
-    #     pass
-
-    #### 1.8 Format 'date'
-    dateExemple = expDf.loc[expDf.index[1],'date']
-    if re.match(dateFormatExcel, dateExemple):
+    #### 1.6 Format 'date'
+    first_date = expDf.loc[expDf.index[0],'date']
+    if re.match(dateFormatExcel, first_date):
         print(gs.ORANGE + 'dates : format corrected' + gs.NORMAL)
         expDf.loc[:,'date'] = expDf.loc[:,'date'].apply(lambda x: x.split('/')[0] + '-' + x.split('/')[1] + '-' + x.split('/')[2][2:])        
-    elif re.match(dateFormatExcel2, dateExemple):
+    elif re.match(dateFormatExcel2, first_date):
         print(gs.ORANGE + 'dates : format corrected' + gs.NORMAL)
         expDf.loc[:,'date'] = expDf.loc[:,'date'].apply(lambda x: x.split('-')[0] + '-' + x.split('-')[1] + '-' + x.split('-')[2][2:])  
         
-    #### 1.9 Format activation fields
-    try:
-        expDf['first activation'] = expDf['first activation'].astype(np.float)
-        expDf['activation frequency'] = expDf['activation frequency'].astype(np.float)
-    except:
-        pass
 
     #### 2. Save the table, if required
     if save:
@@ -177,45 +244,24 @@ def getExperimentalConditions(DirExp = cp.DirRepoExp, save = False, suffix = cp.
     #### 3.1 Make 'manipID'
     expDf['manipID'] = expDf['date'] + '_' + expDf['manip']
     
-    # def str2int(s):
-    #     try:
-    #         x = int(s)
-    #     except:
-    #         x = np.nan
-    #     return(x)
+    #### 3.2 Make 'first time point'
+    dict_firstTimePoint = {}
+    unique_dates = expDf.date.unique()
+    unique_T0 = np.zeros_like(unique_dates, dtype = np.float64)
+    for kk in range(len(unique_dates)):
+        d = unique_dates[kk]
+        d_T0 = findFirstAbsTimeOfDate(cp.DirDataTimeseries, d, suffix = '.csv')
+        unique_T0[kk] = d_T0
+        
+    dictT0 = {unique_dates[ii]:unique_T0[ii] for ii in range(len(unique_dates))}
+    all_T0 = np.array([dictT0[d] for d in expDf.date.values])
+    expDf['date_T0'] = all_T0
+        
     
-    # def str2float(s):
-    #     try:
-    #         x = float(s)
-    #     except:
-    #         x = np.nan
-    #     return(x)
-    
-    
-    # #### 3.2 Format 'bead diameter'
-    # diameters = expDf.loc[:,'bead diameter'].apply(lambda x: str(x).split('_'))
-    # diameters = diameters.apply(lambda x: [int(xx) for xx in x])
-    # expDf.loc[:,'bead diameter'] = diameters
-    # # print(ORANGE + 'ramp field : converted to list successfully' + NORMAL)
-    
-    # #### 3.3 Format 'bead type'
-    # bt = expDf.loc[:,'bead type'].apply(lambda x: str(x).split('_'))
-    # bt = bt.apply(lambda x: [str(xx) for xx in x])
-    # expDf.loc[:,'bead type'] = bt
-    
-    # #### 3.4 Format 'ramp field'
-    # rf = expDf.loc[:,'ramp field'].apply(lambda x: str(x).split('_'))
-    # rf = rf.apply(lambda x: [str2float(xx) for xx in x])
-    # expDf.loc[:,'ramp field'] = rf
-    
-    # #### 3.5 Format 'loop structure'
-    # ls = expDf.loc[:,'loop structure'].apply(lambda x: str(x).split('_'))
-    # ls = ls.apply(lambda x: [str2int(xx) for xx in x])
-    # expDf.loc[:,'loop structure'] = ls
-
     #### 4. END
+    print(gs.GREEN + 'T = {:.3f}'.format(time.time() - top) + gs.NORMAL)
+    
     return(expDf)
-
 
 
 def correctExcelDatesInDf(df, dateColumn, dateExample = ''):
@@ -228,6 +274,41 @@ def correctExcelDatesInDf(df, dateColumn, dateExample = ''):
         print(gs.ORANGE + 'dates : format corrected' + gs.NORMAL)
         df.loc[:,dateColumn] = df.loc[:,dateColumn].apply(lambda x: x.split('-')[0] + '-' + x.split('-')[1] + '-' + x.split('-')[2][2:])
     return(df)
+
+
+def findFirstAbsTimeOfDate(src_path, date, suffix = '.csv'):
+    """
+    Given a directory containing time series (src_path), a date (date), 
+    and a suffix (suffix='.csv'), goes through all the files which name contains 
+    date and ends with suffix, and consider all the first elements of the columns named 'Tabs'.
+    Return the min of these elements.
+    
+    Should be called with src_path = cp.DirDataTimeseries, date = chosen_date, suffix = '.csv',
+    'chosen_date' being the date of an experiment in the format yy-mm-dd.
+    """
+    files = os.listdir(src_path)
+    selected_files = []
+    for f in files:
+        if date in f and f.endswith(suffix):
+            selected_files.append(f)
+    dictOrd = {}
+    listOrd = []
+    for f in selected_files:
+        ordVal = findInfosInFileName(f, 'ordinalValue')
+        dictOrd[ordVal] = f
+        listOrd.append(int(ordVal))
+    try:
+        minOrdVal = str(np.min(listOrd))
+        first_f = dictOrd[minOrdVal]
+        first_f_path = os.path.join(src_path, first_f)
+        df = pd.read_csv(first_f_path, sep = ';', usecols=['Tabs'], nrows=1)
+        date_T0 = df['Tabs'].values[0]
+        
+    except:
+        date_T0 = np.nan
+    
+    return(date_T0)
+        
 
 
 def removeColumnsDuplicate(df):
@@ -252,13 +333,23 @@ def findInfosInFileName(f, infoType):
     Return a given type of info from a file name.
     Inputs : f (str), the file name.
              infoType (str), the type of info wanted.
+             
              infoType can be equal to : 
+                 
              * 'M', 'P', 'C' -> will return the number of manip (M), well (P), or cell (C) in a cellID.
              ex : if f = '21-01-18_M2_P1_C8.tif' and infoType = 'C', the function will return 8.
+             
              * 'manipID'     -> will return the full manip ID.
              ex : if f = '21-01-18_M2_P1_C8.tif' and infoType = 'manipID', the function will return '21-01-18_M2'.
+             
              * 'cellID'     -> will return the full cell ID.
              ex : if f = '21-01-18_M2_P1_C8.tif' and infoType = 'cellID', the function will return '21-01-18_M2_P1_C8'.
+             
+             * 'substrate'  -> will return the string describing the disc used for cell adhesion.
+             ex : if f = '21-01-18_M2_P1_C8_disc15um.tif' and infoType = 'substrate', the function will return 'disc15um'.
+             
+             * 'ordinalValue'  -> will return a value that can be used to order the cells. It is equal to M*1e6 + P*1e3 + C
+             ex : if f = '21-01-18_M2_P1_C8.tif' and infoType = 'ordinalValue', the function will return "2'001'008".
     """
     infoString = ''
     try:
@@ -271,6 +362,18 @@ def findInfosInFileName(f, infoType):
             while f[i+1] in acceptedChar and i < len(f)-1:
                 i += 1
                 infoString += f[i]
+                
+        elif infoType in ['M_float', 'P_float', 'C_float']:
+            acceptedChar = [str(i) for i in range(10)] + ['-']
+            string = '_' + infoType[0]
+            iStart = re.search(string, f).end()
+            i = iStart
+            infoString = '' + f[i]
+            while f[i+1] in acceptedChar and i < len(f)-1:
+                i += 1
+                infoString += f[i]
+            infoString = infoString.replace('-', '.')
+            infoString = float(infoString)
                 
         elif infoType == 'date':
             datePos = re.search(r"[\d]{1,2}-[\d]{1,2}-[\d]{2}", f)
@@ -301,6 +404,19 @@ def findInfosInFileName(f, infoType):
                 infoString = f[pos.start():pos.end()]
             except:
                 infoString = ''
+                
+        elif infoType == 'ordinalValue':
+            M, P, C = findInfosInFileName(f, 'M'), findInfosInFileName(f, 'P'), findInfosInFileName(f, 'C')
+            L = [M, P, C]
+            for i in range(len(L)):
+                s = L[i]
+                if '-' in s:
+                    s = s.replace('-', '.')
+                    L[i] = s
+            [M, P, C] = L
+            ordVal = int(float(M)*1e9 + float(P)*1e6 + float(C)*1e3)
+            infoString = str(ordVal)
+            
     except:
         pass
                              
@@ -367,6 +483,9 @@ def isFileOfInterest(f, manips, wells, cells):
     * manips = [1, 2], wells = 'all', cells = 'all' -> the function return True.
     * manips = [1, 2], wells = 2, cells = 'all' -> the function return False.
     * manips = [1, 2], wells = 1, cells = [5, 6, 7, 8] -> the function return True.
+    Example2 : if f = '21-01-18_M2_P1_C8-1.tif'
+    * manips = [1, 2], wells = 1, cells = [5, 6, 7, 8] -> the function return False.
+    * manips = [1, 2], wells = 1, cells = [5, 6, 7, '8-1'] -> the function return True.
     Note : if manips = 'all', the code will consider that wells = 'all', cells = 'all'.
            if wells = 'all', the code will consider that cells = 'all'.
            This means you can add filters only in this order : manips > wells > cells.
@@ -374,10 +493,15 @@ def isFileOfInterest(f, manips, wells, cells):
     test = False
     testM, testP, testC = False, False, False
     
+    listManips, listWells, listCells = toListOfStrings(manips), toListOfStrings(wells), toListOfStrings(cells)
+    
     try:
-        fM = int(findInfosInFileName(f, 'M'))
-        fP = int(findInfosInFileName(f, 'P'))
-        fC = int(findInfosInFileName(f, 'C'))
+        # fM = int(findInfosInFileName(f, 'M'))
+        # fP = int(findInfosInFileName(f, 'P'))
+        # fC = int(findInfosInFileName(f, 'C'))
+        fM = (findInfosInFileName(f, 'M'))
+        fP = (findInfosInFileName(f, 'P'))
+        fC = (findInfosInFileName(f, 'C'))
     except:
         return(False)
         
@@ -385,11 +509,11 @@ def isFileOfInterest(f, manips, wells, cells):
     # print(manips, wells, cells)
     # print(toList(manips), toList(wells), toList(cells))
     
-    if (manips == 'all') or (fM in toList(manips)):
+    if (manips == 'all') or (fM in listManips):
         testM = True
-    if (wells == 'all') or (fP in toList(wells)):
+    if (wells == 'all') or (fP in listWells):
         testP = True
-    if (cells == 'all') or (fC in toList(cells)):
+    if (cells == 'all') or (fC in listCells):
         testC = True
         
     if testM and testP and testC:
@@ -483,7 +607,86 @@ def archiveData(df, name = '', sep = ';', descText = '',
             f.close()
         
     
+def updateDefaultSettingsDict(settingsDict, defaultSettingsDict):
+    """
+    Update defaultSettingDict with new values contained in settingDict.
 
+    Parameters
+    ----------
+    settingDict : dict
+        Contains new {SettingName (string) : SettingValue (object)} pairs.
+    defaultSettingDict : dict
+        Contains all default {SettingName (string) : SettingValue (object)} pairs.
+
+    Returns
+    -------
+    newSettingDict : dict
+        Contains all default {SettingName (string) : SettingValue (object)} pairs, 
+        but updated where new setting values were inputed from settingDict.
+        
+    Example
+    -------
+    >>> defaultSettingsDict = {'A':1, 'B': 10, 'C': True}
+    >>> settingsDict = {'A':1000, 'D': False}
+    >>> newSettingsDict = updateDefaultSettingsDict(settingDict, 
+                                                  defaultSettingDict)
+    >>> newSettingsDict
+    Out[1]: {'A': 1000, 'B': 10, 'C': True, 'D': False}
+    
+    >>> defaultSettingsDict = {'A':1, 'B': 10, 'C': True}
+    >>> settingsDict = {} # We don't want to modify the default settings
+    >>> newSettingsDict = updateDefaultSettingsDict(settingsDict, 
+                                                    defaultSettingsDict)
+    >>> newSettingsDict
+    Out[2]: {'A':1, 'B': 10, 'C': True}
+    
+    IMPORTANT NOTE
+    --------------
+    I'M GUTTED !!!! This is exactly what the method dict1.update(dict2) does !!!
+    At least it shows that my way of proceeding isn't totally weird.
+    """
+    
+    newSettingsDict = deepcopy(defaultSettingsDict)
+    for k in settingsDict.keys():
+        newSettingsDict[k] = settingsDict[k]
+    return(newSettingsDict)
+
+
+
+def flattenPandasIndex(pandasIndex):
+    """
+    Flatten a multi-leveled pandas index.
+
+    Parameters
+    ----------
+    pandasIndex : pandas MultiIndex
+        Example: MultiIndex([('course', ''),('A', 'count'),('A', 'sum'),( 'coeff', 'sum')])
+
+    Returns
+    -------
+    new_pandasIndex : list that can be reasigned as a flatten index.
+        In the former example: new_pandasIndex = ['course', 'A_count', 'A_sum', 'coeff_sum']
+        
+    Example
+    -------
+    >>> data_agg.columns
+    >>> Out: MultiIndex([('course',      ''),
+    >>>                 (     'A', 'count'),
+    >>>                 (     'A',   'sum'),
+    >>>                 ( 'coeff',   'sum')],
+    >>>                )
+    >>> data_agg.columns = flattenPandasIndex(data_agg.columns)
+    >>> data_agg.columns
+    >>> Out: Index(['course', 'A_count', 'A_sum', 'coeff_sum'], dtype='object')
+
+    """
+    new_pandasIndex = []
+    for idx in pandasIndex:
+        new_idx = '_'.join(idx)
+        while new_idx[-1] == '_':
+            new_idx = new_idx[:-1]
+        new_pandasIndex.append(new_idx)
+    return(new_pandasIndex)
 
 
 # %%% File manipulation
@@ -527,18 +730,24 @@ def softMkdir(path):
 
 # %%% Stats
 
-def get_R2(Y1, Y2):
-    meanY = np.mean(Y1)
-    meanYarray = meanY*np.ones(len(Y1))
-    SST = np.sum((Y1-meanYarray)**2)
-    SSE = np.sum((Y2-meanYarray)**2)
-    R2 = SSE/SST
+def get_R2(Ymeas, Ymodel):
+    meanY = np.mean(Ymeas)
+    meanYarray = meanY*np.ones(len(Ymeas))
+    SST = np.sum((Ymeas-meanYarray)**2)
+    SSE = np.sum((Ymodel-meanYarray)**2)
+    if pd.isnull(SST) or pd.isnull(SSE) or SST == 0:
+        R2 = np.nan
+    else:
+        R2 = SSE/SST
     return(R2)
 
-def get_Chi2(Ymeas, Ymodel, dof, S):
-    residuals = Ymeas-Ymodel
-    Chi2 = np.sum((residuals/S)**2)
-    Chi2_dof = Chi2/dof
+def get_Chi2(Ymeas, Ymodel, dof, err):
+    if dof <= 0:
+        Chi2_dof = np.nan
+    else:
+        residuals = Ymeas-Ymodel
+        Chi2 = np.sum((residuals/err)**2)
+        Chi2_dof = Chi2/dof
     return(Chi2_dof)
 
 # %%% Image processing
@@ -912,16 +1121,57 @@ def fitLine(X, Y):
 #     print(dir(results))
     return(results.params, results)
 
+
 def toList(x):
     """
     if x is a list, return x
-    if x is a number, return [x]
+    if x is not a list, return [x]
+    
+    Reference
+    ---------
+    https://docs.python.org/3/library/collections.abc.html
     """
-    try:
-        x = list(x)
-        return(x)
-    except:
-        return([x])
+    t1 = isinstance(x, str) # Test if x is a string
+    if t1: # x = 'my_string'
+        return([x]) # return : ['my_string']
+    else:
+        t2 = isinstance(x, Collection) # Test if x is a Collection
+        if t2: # x = [1,2,3] or x = array([1, 2, 3]) or x = {'k1' : v1}
+            return(x) # return : x itself
+        else: # x is not a Collection : probably a number or a boolean
+            return([x]) # return : [x]
+        
+def toListOfStrings(x):
+    """
+    if x is a list, return x with all elements converted to string
+    if x is not a list, return ['x']
+    
+    Reference
+    ---------
+    https://docs.python.org/3/library/collections.abc.html
+    """
+    t1 = isinstance(x, str) # Test if x is a string
+    if t1: # x = 'my_string'
+        return([x]) # return : ['my_string']
+    else:
+        t2 = isinstance(x, Collection) # Test if x is a Collection
+        if t2: # x = [1,2,3] or x = array([1, 2, 3]) or x = {'k1' : v1}
+            xx = [str(xi) for xi in x]
+            return(xx) # return : x itself
+        else: # x is not a Collection : probably a number or a boolean
+            return([str(x)]) # return : [x]
+        
+# def toList_V0(x):
+#     """
+#     if x is a list, return x
+#     if x is not a list, return [x]
+#     """
+#     try:
+#         x = list(x)
+#         return(x)
+#     except:
+#         return([x])
+
     
 def drop_duplicates_in_array(A):
     val, idx = np.unique(A, return_index = True)
@@ -1041,3 +1291,96 @@ def lighten_color(color, amount=0.5):
         c = color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return(colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2]))
+
+# %%% User Input
+
+class ChoicesBox(Qtw.QMainWindow):
+    def __init__(self, choicesDict, title = 'Multiple choice box'):
+        super().__init__()
+        
+        
+        self.choicesDict = choicesDict
+        self.questions = [k for k in choicesDict.keys()]
+        self.nQ = len(self.questions)
+        
+        self.res = {}
+        self.list_rbg = [] # rbg = radio button group
+
+        self.setWindowTitle(title)
+        
+        layout = Qtw.QVBoxLayout()  # layout for the central widget
+        main_widget = Qtw.QWidget(self)  # central widget
+        main_widget.setLayout(layout)
+        
+        for q in self.questions:
+            choices = self.choicesDict[q]
+            label = Qtw.QLabel(q)
+            layout.addWidget(label)
+            rbg = Qtw.QButtonGroup(main_widget)
+            for c in choices:
+                rb = Qtw.QRadioButton(c)
+                rbg.addButton(rb)
+                layout.addWidget(rb)
+                
+            self.list_rbg.append(rbg)
+            layout.addSpacing(20)
+        
+        valid_button = Qtw.QPushButton('OK', main_widget)
+        layout.addWidget(valid_button)
+        
+        self.setCentralWidget(main_widget)
+        
+        valid_button.clicked.connect(self.validate_button)
+
+
+    def validate_button(self):
+        array_err = np.array([rbg.checkedButton() == None for rbg in self.list_rbg])
+        Err = np.any(array_err)
+        if Err:
+            self.error_dialog()
+        else:
+            for i in range(self.nQ):
+                q = self.questions[i]
+                rbg = self.list_rbg[i]
+                self.res[q] = rbg.checkedButton().text()
+                
+            self.quit_button()
+            
+    def error_dialog(self):
+        dlg = Qtw.QMessageBox(self)
+        dlg.setWindowTitle("Error")
+        dlg.setText("Please make a choice in each category.")
+        dlg.exec()
+        
+    def quit_button(self):
+        Qtw.QApplication.quit()
+        self.close()
+
+
+def makeChoicesBox(choicesDict):
+    """
+    Create and show a dialog box with multiple choices.
+    
+
+    Parameters
+    ----------
+    choicesDict : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    app = Qtw.QApplication(sys.argv)
+    
+    box = ChoicesBox(choicesDict)
+    box.show()
+        
+    app.exec()
+    res = box.res
+    return(res)
+
+
+
+
