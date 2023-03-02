@@ -75,18 +75,6 @@ pd.reset_option('display.max_rows')
 ####  Matplotlib
 matplotlib.rcParams.update({'figure.autolayout': True})
 
-#### Graphic options
-gs.set_default_options_jv()
-
-#### Bokeh
-from bokeh.io import output_notebook, show
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, HoverTool, Range1d
-from bokeh.transform import factor_cmap
-from bokeh.palettes import Category10
-from bokeh.layouts import gridplot
-output_notebook()
-
 
 # %% Reminders
 

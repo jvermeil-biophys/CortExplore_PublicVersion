@@ -56,11 +56,7 @@ from SimpleBeadTracker import mainTracker
 # 2. Pandas settings
 pd.set_option('mode.chained_assignment',None)
 
-# 3. Graphical settings
-gs.set_default_options_jv()
-
-
-# 4. Import of the experimental conditions
+# 3. Import of the experimental conditions
 
 expDf = ufun.getExperimentalConditions(DirExp = cp.DirRepoExp, save = True)
 

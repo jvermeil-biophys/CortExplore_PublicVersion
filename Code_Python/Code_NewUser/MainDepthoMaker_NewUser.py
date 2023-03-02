@@ -47,13 +47,10 @@ import GraphicStyles as gs
 import GlobalConstants as gc
 import UtilityFunctions as ufun
 
-from BeadTracker import depthoMaker
+from SimpleBeadTracker import depthoMaker
 
 # 2. Pandas settings
 pd.set_option('mode.chained_assignment',None)
-
-# 3. Graphical settings
-gs.set_default_options_jv()
 
 
 # %% Next depthos !

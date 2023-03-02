@@ -66,10 +66,6 @@ import TrackAnalyser as taka
 ####  Matplotlib
 matplotlib.rcParams.update({'figure.autolayout': True})
 
-#### Graphic options
-gs.set_default_options_jv()
-
-
 
 # %% TimeSeries functions
 
