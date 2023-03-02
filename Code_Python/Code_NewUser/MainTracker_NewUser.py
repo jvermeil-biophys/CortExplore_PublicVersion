@@ -50,7 +50,7 @@ import GraphicStyles as gs
 import GlobalConstants as gc
 import UtilityFunctions as ufun
 
-from BeadTracker import mainTracker
+from SimpleBeadTracker import mainTracker
 
 
 # 2. Pandas settings
@@ -62,7 +62,7 @@ gs.set_default_options_jv()
 
 # 4. Import of the experimental conditions
 
-expDf = ufun.getExperimentalConditions(DirExp = cp.DirRepoExp, save = True, sep = ';')
+expDf = ufun.getExperimentalConditions(DirExp = cp.DirRepoExp, save = True)
 
 # %% Small things
 
@@ -91,6 +91,27 @@ plt.close('all')
 # %%%% Next manipe
 
 
+# %% Example Topic - 3T3 constant field experiment
+
+# %%% 21.02.10, constant field experiment of 3T3 aSFL fibroblast, M450, M1 = ctrl
+# %%%% 21.02.10_M1 C1 only
+dates = '21.02.10'
+manips, wells, cells = 1, 1, 2
+depthoNames = '21.02.10_M1_M450_step20_100X'
+
+output = mainTracker(dates, manips, wells, cells, depthoNames, expDf, 
+                     redoAllSteps = True, trackAll = False, 
+                     sourceField = 'time_only')
+
+
+# %%%% 21.02.10_M1 
+dates = '21.02.10'
+manips, wells, cells = 1, 1, 'all'
+depthoNames = '21.02.10_M1_M450_step20_100X'
+
+output = mainTracker(dates, manips, wells, cells, depthoNames, expDf, 
+                     redoAllSteps = False, trackAll = False, 
+                     sourceField = 'time_only')
 
 
 # %% Example Topic - HoxB8 macrophages
