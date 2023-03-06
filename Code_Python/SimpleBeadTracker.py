@@ -316,8 +316,9 @@ class PincherTimeLapse:
 
             if not self.dictLog['UI'][init_iS]: # Nothing in the log yet
                 self.listFrames[init_iF].show()
-                mngr = plt.get_current_fig_manager()
-                mngr.window.setGeometry(720, 50, 1175, 1000)
+                #### Windows specific
+#                 mngr = plt.get_current_fig_manager()
+#                 mngr.window.setGeometry(720, 50, 1175, 1000)
                 QA = pyautogui.confirm(
                     text='Can you point the beads of interest\nin the image ' + str(init_iS + 1) + '?',
                     title='Initialise tracker',
@@ -476,8 +477,9 @@ class PincherTimeLapse:
                             ax = plt.gca()
                             T.plot(ax, iB)
                         
-                        mngr = plt.get_current_fig_manager()
-                        mngr.window.setGeometry(720, 50, 1175, 1000)
+                        #### Windows specific
+                        # mngr = plt.get_current_fig_manager()
+                        # mngr.window.setGeometry(720, 50, 1175, 1000)
                         QA = pyautogui.confirm(
                             text='Can you point the beads of interest\nin the image ' + str(iS + 1) + '?',
                             title='', 
@@ -1299,8 +1301,10 @@ class Trajectory:
         
         # Display the figure    
         plt.show()
-        mngr = plt.get_current_fig_manager()
-        mngr.window.setGeometry(720, 50, 1175, 1000)
+        
+        #### Windows specific
+#         mngr = plt.get_current_fig_manager()
+#         mngr.window.setGeometry(720, 50, 1175, 1000)
         
         # Ask the question(s)
         # Q1
@@ -1376,9 +1380,10 @@ def mainTracker(dates, manips, wells, cells, depthoNames, expDf, NB = 2,
         for f in fileList:
             if ufun.isFileOfInterest(f, manips, wells, cells): # See Utility Functions > isFileOfInterest
                 fPath = os.path.join(rd, f)
-                if os.path.isfile(fPath[:-4] + '_Field.txt'):
-                    imagesToAnalyse.append(f)
-                    imagesToAnalyse_Paths.append(os.path.join(rd, f))    
+                if os.path.isfile(fPath[:-4] + '_Field.txt') or sourceField == 'no_field_file':
+                    if f.endswith('.tif') or f.endswith('.tiff') or f.endswith('.TIF'):
+                        imagesToAnalyse.append(f)
+                        imagesToAnalyse_Paths.append(os.path.join(rd, f))    
     
     
         #### 0.2 - Begining of the Main Loop
@@ -1419,8 +1424,14 @@ def mainTracker(dates, manips, wells, cells, depthoNames, expDf, NB = 2,
             fieldDf = pd.read_csv(fieldFilePath, sep = '\t', names = fieldCols) # '\t'
             N = len(fieldDf.T_abs.values)
             fieldDf['B_set'] = PTL.MagField * np.ones(N, dtype = np.float64)
+        elif sourceField == 'no_field_file':    
+            N = PTL.nS
+            T_abs = np.arange(N, dtype = np.float64)
+            B_set = PTL.MagField * np.ones(N, dtype = np.float64)
+            dict_field = {'T_abs':T_abs,
+                          'B_set':B_set}
+            fieldDf = pd.DataFrame(dict_field)
             
-        
         #### 0.6 - Check if a log file exists and load it if required
         logFilePath = fP[:-4] + '_LogPY.txt'
         logFileImported = False
