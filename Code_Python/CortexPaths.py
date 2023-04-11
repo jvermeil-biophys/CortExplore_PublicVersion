@@ -36,20 +36,20 @@ COMPUTERNAME = os.environ['COMPUTERNAME']
 
 if COMPUTERNAME == '>>>Computer_name':
     suffix = '>>>_##'
-    DirRepo = "C://Users//>>>User//Desktop//CortExplore"
+    DirRepo = "C://Users//>>>User//Desktop//CortExplore_PublicVersion"
     DirData = "D://MagneticPincherData"
     DirCloud = "C://Users//>>>User//>>>ownCloud//MagneticPincherData" + suffix
     DirTempPlots = "C://Users//>>>User//Desktop//TempPlots"
-    CloudSaving = '>>>OwnCloud'
+    CloudSaving = ''
     
     
 elif COMPUTERNAME == '>>>Other_computer_name':
     suffix = '>>>_##'
-    DirRepo = "C://Users//>>>User//Desktop//CortExplore"
+    DirRepo = "C://Users//>>>User//Desktop//CortExplore_PublicVersion"
     DirData = "D://MagneticPincherData"
     DirCloud = "C://Users//>>>User//>>>ownCloud//MagneticPincherData" + suffix
     DirTempPlots = "C://Users//>>>User//Desktop//TempPlots"
-    CloudSaving = '>>>OwnCloud'
+    CloudSaving = ''
     
     
 # 1.2 Init sub directories
@@ -99,7 +99,7 @@ DataSubdirs = [DirDataRaw, DirDataAnalysis, DirDataFig,
                DirDataTimeseries, DirDataTimeseriesTraj, DirDataTimeseriesRawtraj]
 
 if not CloudSaving == '':
-    CloudDirs = [DirCloud, DirCloudExp, DirCloudFig, DirCloudAnalysis, DirCloudTimeseries, DirCloudTimeseriesStressStrain]
+    CloudDirs = [DirCloud, DirCloudExp, DirCloudFig, DirCloudAnalysis, DirCloudTimeseries]
 
 
 def checkDirArchi():
@@ -177,7 +177,7 @@ def makeDirArchi():
 
                 
                 
-# %% Final Architecture - august 2022
+# %% Final Architecture - april 2023
 
 # Notes:
 # > ## is the user's suffix (for example: JV: Joseph Vermeil).
@@ -187,14 +187,9 @@ def makeDirArchi():
 # │  ├─ User/
 # │  │  ├─ Desktop/
 # │  │  │  ├─ CortExplore/
-# │  │  │  │  ├─ Data_BeadsCalibration/
-# │  │  │  │  │  ├─ Contains files regarding the calibration of beads lots.
 # │  │  │  │  │ 
 # │  │  │  │  ├─ Data_Experimental/
 # │  │  │  │  │  ├─ The VERY IMPORTANT experimental data table (.csv).
-# │  │  │  │  │ 
-# │  │  │  │  ├─ Code_Matlab/
-# │  │  │  │  │  ├─ Any matlab coded program. For now mainly the Photomask drawing.
 # │  │  │  │  │ 
 # │  │  │  │  ├─ Code_Python/
 # │  │  │  │  │  ├─ Code_##/ 		 -> TO CREATE AT THE BEGINNING FROM "Code_NewUser". Personnal code! Code to analyse, or to plot the data. Mainly scripts.
@@ -219,9 +214,6 @@ def makeDirArchi():
 # │  ├─ Data_Analysis/
 # │  │  ├─ All the large analysed data tables (.csv).
 # │  │ 
-# │  ├─ Data_Experimental/
-# │  │  ├─ The VERY IMPORTANT experimental data table (.csv).
-# │  │ 
 # │  ├─ Data_Timeseries/
 # │  │  ├─ All timeseries files (.csv) -> For each cell: F, B, dx, dy, dz, D3 as function of T.
 # │  │  ├─ Trajectories_raw/
@@ -244,3 +236,5 @@ def makeDirArchi():
 # │  │  ├─ yy.mm.dd/	  -> Raw timelapse images (.tif), Fields.txt and .Results.txt files for this experiment day.
 # │  │  ├─ yy.mm.dd_Deptho/ -> Raw deptho stacks (.tif) and .Results.txt files for this experiment day.
 # │  │  ├─ yy.mm.dd_Fluo/   -> Potentially, fluo images (.tif) as extracted from the timelapse.
+
+

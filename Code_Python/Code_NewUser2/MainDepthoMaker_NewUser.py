@@ -59,7 +59,6 @@ pd.set_option('mode.chained_assignment',None)
 
 # %% Example Deptho making - All depthos from 22.07.27 Long Linker experiments
 
-DirDataRaw = 'D://MagneticPincherData//Raw'
 DirDataRaw = cp.DirDataRaw
 date = '22.07.27'
 
